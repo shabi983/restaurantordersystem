@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" type="image/png" href="AS White.png">
+</head>
+<body>
+
+  <div style="width: 100%; display: inline-flex; align-items: anchor-center; position: sticky; top: 0px; margin-bottom: 5px;   background: #ffffff; flex-direction: row; justify-content: space-around; border-bottom: 3px solid #0097e1; z-index: 9999;">
+ <h1 class="text-2xl font-bold mb-4">Login</h1> <img style="width:70px;" src="AS White.png"><span class="text-gray-500 text-sm"><i>Version 1.0.0.0</i></span>
+</div>
+
+<div class="flex items-center justify-center h-screen">
+  <div class="bg-white p-8 rounded shadow-md w-full max-w-sm">
+    <h2 class="text-xl font-bold mb-4 text-center">Admin / User Info</h2>
+    <input type="text" id="username" placeholder="Username" class="w-full border p-2 mb-2 rounded outline-none"/>
+    <input type="password" id="password" placeholder="Password" class="w-full border p-2 mb-2 rounded outline-none"/>
+    <button onclick="login()" class="bg-[#0097e1] text-white w-full py-2 rounded hover:bg-blue-600">Login</button>
+    <p id="loginMessage" class="text-red-500 text-sm mt-2 text-center"></p>
+  </div>
+  </div>
+  <script>
+    // === GLOBAL SESSION HANDLING ===
+const API_URL = "https://script.google.com/macros/s/AKfycby_dcdxa11mxd14S1Uvd7m9hQR-FKgGh3jYMu0emhBFiw5FAbpM7oa7smACeZUJQMod0A/exec"; // replace with actual URL
+const userIP = ""; // Optional: Get real IP via external API
+
+// === LOGIN ===
+function login() {
+  const user = document.getElementById("username").value;
+  const pass = document.getElementById("password").value;
+1
+  fetch(API_URL, {
+    method: "POST",
+    body: new URLSearchParams({
+      action: "login",
+      username: user,
+      password: pass,
+      ip: userIP || "unknown"
+    })
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        localStorage.setItem("session", data.token);
+        localStorage.setItem("role", data.role);
+        localStorage.setItem("username", document.getElementById("username").value); // ✅ add this
+
+        if (data.role === "admin") {
+          window.location.href = "admin.html";
+        } else if (data.role === "user") {
+          window.location.href = "user.html";
+        }
+      } else {
+        document.getElementById("loginMessage").innerText = "Login failed";
+      }
+    });
+}
+  </script>
+
+  <!-- Loader -->
+<div id="globalLoader" class="fixed inset-0 bg-[#0097e1] bg-opacity-70 z-50 flex items-center justify-center hidden">
+  <h1 class="text-white text-4xl font-bold animate-pulse font-mono">Abiha Softo</h1>
+</div>
+
+<style>
+  @keyframes wave {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+    100% { transform: translateY(0px); }
+  }
+  #globalLoader h1 {
+    animation: wave 1s infinite ease-in-out;
+    font-style:italic;
+  }
+</style>
+<script>
+  function showLoader() {
+    document.getElementById("globalLoader").classList.remove("hidden");
+  }
+
+  function hideLoader() {
+    document.getElementById("globalLoader").classList.add("hidden");
+  }
+
+  // Optional: Wrap all fetch calls to auto-apply loader
+  const originalFetch = window.fetch;
+  window.fetch = function (...args) {
+    showLoader();
+    return originalFetch(...args)
+      .then(res => {
+        hideLoader();
+        return res;
+      })
+      .catch(err => {
+        hideLoader();
+        throw err;
+      });
+  };
+</script>
+</body>
+</html>

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>User Order</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" type="image/png" href="AS White.png">
+</head>
+<body class="bg-gray-100">
+  <div style="width: 100%; display: inline-flex; align-items: anchor-center; position: sticky; top: 0px; margin-bottom: 5px;   background: #ffffff; flex-direction: row; justify-content: space-around; border-bottom: 3px solid #0097e1; z-index: 9999;">
+ <h1 class="text-2xl font-bold mb-4">Take Order</h1> <img style="width:70px;" src="AS White.png"><span class="text-gray-500 text-sm"><i>Version 1.0.0.0</i></span>
+</div>
+
+  <div class="p-4 max-w-3xl mx-auto">
+    <label class="block mb-2">
+      <input type="checkbox" id="previewToggle" onchange="syncLivePreview()" class="mr-2" checked>
+      Enable Live Preview
+    </label>
+
+    <!-- Searchable Bar -->
+    <label class="block text-sm font-medium mb-1">Search Item:</label>
+    <input type="text" id="searchInput" placeholder="Search items..." class="border p-2 rounded w-full mb-4 outline-none" oninput="filterSuggestions()" onkeydown="handleSearchKey(event)">
+    <ul id="suggestions" class="border rounded bg-white shadow-md max-h-40 overflow-y-auto hidden absolute z-10"></ul>
+
+    <!-- Select Dropdown (Hidden but used for tracking) -->
+    <select id="itemSelect" multiple class="hidden"></select>
+
+    <!-- Selected Items Area -->
+    <form id="orderForm">
+      <div id="menuItems" class="grid gap-4"></div>
+    </form>
+
+    <textarea id="notes" placeholder="Notes..." class="w-full p-2 border rounded mt-4 outline-none"></textarea>
+    <div class="flex gap-2 mt-4">
+      <button onclick="submitOrder()" class="bg-[#0097e1] text-white px-4 py-2 rounded">Submit</button>
+      <button onclick="printReceipt()" class="bg-[#0097e1] text-white px-4 py-2 rounded">Print</button>
+      <button onclick="clearOrder()" class="bg-red-600 text-white px-4 py-2 rounded">Reset Customer Preview</button>
+    </div>
+
+<!-- Receipt Popup -->
+<div id="receiptPopup" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 hidden">
+  <div class="bg-white p-6 rounded shadow max-w-md w-full" id="receiptContent">
+    <div class="flex justify-between items-center mb-4">
+      <img src="AS White.png" alt="Company Logo" class="w-16 h-16 object-contain">
+      <div id="qrContainer"></div>
+    </div>
+    <div id="receiptBody" class="text-sm"></div>
+    <div class="text-center mt-4 no-print">
+      <button onclick="window.print()" class="bg-blue-600 text-white px-4 py-2 rounded">🖨 Print</button>
+      <button onclick="closeReceipt()" class="text-gray-500 mt-2 block">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycby_dcdxa11mxd14S1Uvd7m9hQR-FKgGh3jYMu0emhBFiw5FAbpM7oa7smACeZUJQMod0A/exec";
+let fullMenu = [], selectedItemsMap = {};
+
+window.onload = () => {
+  fetch(API_URL + '?action=getMenu')
+    .then(res => res.json())
+    .then(data => {
+      fullMenu = data;
+      populateSuggestions();
+    });
+};
+
+function populateSuggestions() {
+  const list = document.getElementById("suggestions");
+  list.innerHTML = fullMenu.map(item => `<li onclick="addItem('${item["Item Name"]}')" class="px-3 py-2 hover:bg-gray-100 cursor-pointer">${item["Item Name"]}</li>`).join('');
+}
+
+function filterSuggestions() {
+  const input = document.getElementById("searchInput").value.toLowerCase();
+  const filtered = fullMenu.filter(item => item["Item Name"].toLowerCase().includes(input));
+  const list = document.getElementById("suggestions");
+  list.innerHTML = filtered.map(item => `<li onclick="addItem('${item["Item Name"]}')" class="px-3 py-2 hover:bg-gray-100 cursor-pointer">${item["Item Name"]}</li>`).join('');
+  list.classList.toggle("hidden", filtered.length === 0);
+}
+
+function handleSearchKey(e) {
+  const suggestions = document.getElementById("suggestions");
+  if (e.key === "Enter") {
+    e.preventDefault();
+    const first = suggestions.querySelector("li");
+    if (first) first.click();
+  }
+}
+
+function addItem(itemName) {
+  if (selectedItemsMap[itemName]) return;
+  const item = fullMenu.find(i => i["Item Name"] === itemName);
+  selectedItemsMap[itemName] = item;
+  renderSelectedItems();
+  document.getElementById("searchInput").value = "";
+  document.getElementById("suggestions").classList.add("hidden");
+}
+
+function removeItem(itemName) {
+  delete selectedItemsMap[itemName];
+  renderSelectedItems();
+}
+
+function renderSelectedItems() {
+  let html = "";
+  for (let itemName in selectedItemsMap) {
+    const item = selectedItemsMap[itemName];
+    html += `
+      <div class="border rounded p-3 bg-white shadow relative">
+        <button onclick="removeItem('${itemName}')" class="absolute top-1 right-2 text-red-500 font-bold text-lg hover:text-red-700">×</button>
+        <div class="font-bold">${item["Item Name"]} <span class="text-gray-500">(USD. ${item.Price})</span></div>
+    `;
+    if (item.Sauces) {
+      html += `<label class="block mt-2 text-sm font-medium">Sauces:</label><div class="grid grid-cols-2 gap-2 mt-1">`;
+      html += item.Sauces.split(',').map(s => `
+        <label class="inline-flex items-center">
+          <input type="checkbox" class="sauce-input mr-2" data-item="${item["Item Name"]}" value="${s.trim()}"> ${s.trim()}
+        </label>`).join('');
+      html += `</div>`;
+    }
+    if (item.Extras) {
+      html += `<label class="block mt-2 text-sm font-medium">Extras:</label><div class="grid grid-cols-2 gap-2 mt-1">`;
+      html += item.Extras.split(',').map(e => `
+        <label class="inline-flex items-center">
+          <input type="checkbox" class="extra-input mr-2" data-item="${item["Item Name"]}" value="${e.trim()}"> ${e.trim()}
+        </label>`).join('');
+      html += `</div>`;
+    }
+    html += `</div>`;
+  }
+
+  document.getElementById("menuItems").innerHTML = html;
+
+  // 🆕 Attach change listeners to update live preview when sauces or extras are selected
+  document.querySelectorAll(".sauce-input, .extra-input").forEach(input => {
+    input.addEventListener("change", () => {
+      syncLivePreview();
+    });
+  });
+
+  // 🆕 Attach input listener to notes field
+  document.getElementById("notes").addEventListener("input", () => {
+    syncLivePreview();
+  });
+
+  // Initial sync
+  syncLivePreview();
+}
+
+
+function submitOrder() {
+  const order = [], user = localStorage.getItem("username") || "anonymous";
+  let total = 0;
+  for (let itemName in selectedItemsMap) {
+    const item = selectedItemsMap[itemName];
+    const sauces = Array.from(document.querySelectorAll(`.sauce-input[data-item='${itemName}']:checked`)).map(cb => cb.value);
+    const extras = Array.from(document.querySelectorAll(`.extra-input[data-item='${itemName}']:checked`)).map(cb => cb.value);
+    total += parseFloat(item.Price);
+    order.push({ name: itemName, price: item.Price, sauces, extras });
+  }
+  const notes = document.getElementById("notes").value;
+  const payload = { user, items: order, total, notes, preview: document.getElementById("previewToggle").checked ? "true" : "false" };
+  fetch(API_URL, {
+    method: "POST",
+    body: new URLSearchParams({ action: "submitOrder", order: JSON.stringify(payload) })
+  }).then(res => res.json()).then(data => {
+    alert("✅ Order submitted successfully!");
+    clearOrder();
+  });
+}
+
+function syncLivePreview() {
+  let preview = [], total = 0;
+  for (let itemName in selectedItemsMap) {
+    const item = selectedItemsMap[itemName];
+    const sauces = Array.from(document.querySelectorAll(`.sauce-input[data-item='${itemName}']:checked`)).map(cb => cb.value);
+    const extras = Array.from(document.querySelectorAll(`.extra-input[data-item='${itemName}']:checked`)).map(cb => cb.value);
+    total += parseFloat(item.Price);
+    preview.push({ name: itemName, price: item.Price, sauces, extras });
+
+  }
+  const notes = document.getElementById("notes").value;
+  if (document.getElementById("previewToggle").checked) {
+    fetch(API_URL, {
+      method: "POST",
+      body: new URLSearchParams({ action: "setLivePreview", data: JSON.stringify({ items: preview, total, notes }) })
+    });
+  }
+}
+
+function clearOrder() {
+  selectedItemsMap = {};
+  document.getElementById("menuItems").innerHTML = "";
+  document.getElementById("notes").value = "";
+  syncLivePreview();
+}
+
+function printReceipt() {
+  const items = [], receiptBody = document.getElementById("receiptBody");
+  let total = 0;
+  for (let itemName in selectedItemsMap) {
+    const item = selectedItemsMap[itemName];
+    const sauces = Array.from(document.querySelectorAll(`.sauce-input[data-item='${itemName}']:checked`)).map(cb => cb.value).join(", ") || "-";
+    const extras = Array.from(document.querySelectorAll(`.extra-input[data-item='${itemName}']:checked`)).map(cb => cb.value).join(", ") || "-";
+    total += parseFloat(item.Price);
+    items.push({ itemName, price: item.Price, sauces, extras });
+  }
+  let html = `<table class="w-full text-sm border-b mb-2"><tr class="font-semibold border-b"><th>Item</th><th>Sauce</th><th>Extra</th><th>Rs</th></tr>`;
+  items.forEach(i => {
+    html += `<tr><td>${i.itemName}</td><td>${i.sauces}</td><td>${i.extras}</td><td>${i.price}</td></tr>`;
+  });
+  html += `</table><p class="font-semibold mt-2">Total: USD. ${total}</p>`;
+  const notes = document.getElementById("notes").value;
+  if (notes) html += `<p class="italic text-sm mt-1">Note: ${notes}</p>`;
+  receiptBody.innerHTML = html;
+  const qr = new QRious({ element: document.createElement("canvas"), value: "Thank you for your order!", size: 80 });
+  const qrContainer = document.getElementById("qrContainer");
+  qrContainer.innerHTML = "";
+  qrContainer.appendChild(qr.element);
+  document.getElementById("receiptPopup").classList.remove("hidden");
+}
+
+function closeReceipt() {
+  document.getElementById("receiptPopup").classList.add("hidden");
+}
+</script>
+
+<style>
+  @media print {.no-print { display: none !important; }}
+</style>
+<!-- Loader -->
+  <div id="globalLoader" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+    <div class="relative flex items-center justify-center" style="position: absolute; bottom: 60px; right: 30px;">
+      <div class="absolute w-32 h-32 border-4 border-[#0097e1] border-dashed rounded-full animate-spin"></div>
+      <h1 class="text-[#0097e1] uppercase text-l font-bold font-mono animate-zoom italic">Abiha Softo</h1>
+    </div>
+  </div>
+
+  <!-- Styles -->
+  <style>
+    @keyframes zoom {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+    }
+    .animate-zoom {
+      animation: zoom 1s ease-in-out infinite;
+    }
+  </style>
+
+  <!-- Loader Script -->
+  <script>
+    function showLoader() {
+      document.getElementById("globalLoader").classList.remove("hidden");
+    }
+    function hideLoader() {
+      document.getElementById("globalLoader").classList.add("hidden");
+    }
+
+    const originalFetch = window.fetch;
+    window.fetch = function (...args) {
+      showLoader();
+      return originalFetch(...args)
+        .then(res => {
+          hideLoader();
+          return res;
+        })
+        .catch(err => {
+          hideLoader();
+          throw err;
+        });
+    };
+  </script>
+</body>
+</html>

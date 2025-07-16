@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Panel</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" type="text/css" href="styles.css">
+  <link rel="icon" type="image/png" href="AS White.png">
+</head>
+<body class="bg-gray-100">
+
+<div style="width: 100%; display: inline-flex; align-items: anchor-center; position: sticky; top: 0px; margin-bottom: 5px;   background: #ffffff; flex-direction: row; justify-content: space-around; border-bottom: 3px solid #0097e1; z-index: 9999;">
+ <h1 class="text-2xl font-bold mb-4">Admin Dashboard</h1> <img style="width:70px;" src="AS White.png"><span class="text-gray-500 text-sm"><i>Version 1.0.0.0</i></span>
+</div>
+
+<div class="p-4 max-w-7xl mx-auto">
+<!-- Tabs -->
+<div class="flex gap-2 mb-4">
+  <button id="tab-users" class="tab-button bg-[#0097e1] text-white px-4 py-2 rounded" onclick="showTab('users')">Users</button>
+  <button id="tab-menu" class="tab-button bg-[#0097e1] text-white px-4 py-2 rounded" onclick="showTab('menu')">Menu</button>
+  <button id="tab-orders" class="tab-button bg-[#0097e1] text-white px-4 py-2 rounded" onclick="showTab('orders')">Orders</button>
+</div>
+
+
+
+  <!-- Main Content -->
+  <div id="adminContent" class="bg-white p-4 rounded shadow overflow-x-auto">Loading...</div>
+</div>
+
+<!-- Modal -->
+<div id="modalBackdrop" class="justify-items-center content-center fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-50">
+  <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6" id="modalContent">
+    <h2 class="text-lg font-bold mb-4" id="modalTitle">Edit</h2>
+    <div id="modalBody"></div>
+    <div class="flex justify-end gap-2 mt-4">
+      <button onclick="closeModal()" class="bg-red-100 text-black px-4 py-1 rounded">Cancel</button>
+      <button onclick="saveModalData()" class="bg-[#0097e1] text-white px-4 py-1 rounded">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+const API_URL = "https://script.google.com/macros/s/AKfycby_dcdxa11mxd14S1Uvd7m9hQR-FKgGh3jYMu0emhBFiw5FAbpM7oa7smACeZUJQMod0A/exec";
+let modalType = "", modalData = null;
+let liveRefreshEnabled = true; // <== This was missing!
+
+function loadUsers() {
+  showLoader();
+  fetch(`${API_URL}?action=getUsers`).then(res => res.json()).then(data => {
+    let html = `
+      <h2 class="text-xl font-semibold mb-2">Users</h2>
+      <button onclick="showAddUserForm()" class="bg-green-600 text-white px-3 py-1 rounded mb-2">+ Add User</button>
+      <table class="w-full table-auto text-sm">
+        <tr class="bg-gray-200"><th>Username</th><th>Password</th><th>Role</th><th>Actions</th></tr>
+    `;
+
+    data.forEach(u => {
+      html += `
+        <tr>
+          <td>${u.username}</td>
+          <td>${u.password}</td>
+          <td>${u.role}</td>
+          <td>
+            <button onclick='openModal("user", ${JSON.stringify(u)})' class="bg-[#0097e1]  text-white px-2 py-1 rounded">Edit</button>
+            <button onclick='deleteUser("${u.username}")' class="bg-red-600 text-white px-2 py-1 rounded ml-2">Delete</button>
+          </td>
+        </tr>`;
+    });
+    html += `</table>`;
+    document.getElementById("adminContent").innerHTML = html; hideLoader();
+  });
+}
+
+function showAddUserForm() {
+  document.getElementById("adminContent").innerHTML = `
+    <h3 class="text-lg font-semibold mb-2">Add New User</h3>
+    <input id="newUser" class="border p-1 mb-2 block w-full" placeholder="Username">
+    <input id="newPass" class="border p-1 mb-2 block w-full" placeholder="Password">
+    <select id="newRole" class="border p-1 mb-2 block w-full">
+      <option value="admin">Admin</option>
+      <option value="user">User</option>
+    </select>
+    <button onclick="addUser()" class="bg-[#0097e1] text-white px-3 py-1 rounded">Save</button>
+  `;
+}
+
+function addUser() {
+   fetch(API_URL, {
+    method: "POST",
+    body: new URLSearchParams({
+      action: "addUser",
+      username: document.getElementById("newUser").value,
+      password: document.getElementById("newPass").value,
+      role: document.getElementById("newRole").value
+    })
+  }).then(() => showTab("users"));
+}
+
+function deleteUser(username) {
+  
+  if (!confirm("Delete user?")) return;
+  fetch(API_URL, {
+    method: "POST",
+    body: new URLSearchParams({ action: "deleteUser", username }) 
+  }).then(() => showTab("users")); 
+}
+
+// ========== MENU ==========
+function loadMenu() {
+
+  fetch(`${API_URL}?action=getMenu`)
+    .then(res => res.json())
+    .then(data => {
+      let html = `
+        <h2 class="text-xl font-semibold mb-2">Menu</h2>
+        <button onclick="showAddMenuForm()" class="bg-green-600 text-white px-3 py-1 rounded mb-4">+ Add Item</button>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      `;
+      data.forEach(item => {
+        const image = item.Image
+          ? (item.Image.includes("drive.google.com")
+              ? `<iframe src="${item.Image}" class="w-full h-40 rounded mb-2" frameborder="0" allowfullscreen></iframe>`
+              : `<img src="${item.Image}" class="w-full h-40 rounded mb-2 object-cover" alt="Menu Image">`)
+          : `<div class="w-full h-40 bg-gray-200 flex items-center justify-center text-sm text-gray-400 mb-2 rounded">No Image</div>`;
+
+        html += `
+          <div class="bg-white p-4 border rounded shadow">
+            ${image}
+            <h3 class="text-lg font-bold">${item["Item Name"]}</h3>
+            <p>Category: ${item.Category}</p>
+            <p>Price: USD. ${item.Price}</p>
+            <p>Sauces: ${item.Sauces || "-"}</p>
+            <p>Extras: ${item.Extras || "-"}</p>
+            <div class="mt-2 flex justify-between">
+              <button onclick='openModal("menu", ${JSON.stringify(item)})' class="bg-[#0097e1] text-white px-3 py-1 rounded text-sm">✏️ Edit</button>
+              <button onclick='deleteMenuItem("${item.ID}")' class="bg-red-600 text-white px-3 py-1 rounded text-sm">🗑️ Delete</button>
+            </div>
+          </div>
+        `;
+      });
+      html += `</div>`;
+      document.getElementById("adminContent").innerHTML = html;
+    });
+
+}
+
+
+function showAddMenuForm() {
+  document.getElementById("adminContent").innerHTML = `
+    <h3 class="text-lg font-semibold mb-2">Add Menu Item</h3>
+    <input id="m_id" class="border p-1 mb-2 block w-full" placeholder="ID">
+    <input id="m_name" class="border p-1 mb-2 block w-full" placeholder="Item Name">
+    <input id="m_price" class="border p-1 mb-2 block w-full" placeholder="Price">
+    <input id="m_cat" class="border p-1 mb-2 block w-full" placeholder="Category">
+    <input id="m_sauce" class="border p-1 mb-2 block w-full" placeholder="Sauces (comma)">
+    <input id="m_extra" class="border p-1 mb-2 block w-full" placeholder="Extras (comma)">
+    
+    <label class="block mt-2">Upload Image (optional):</label>
+    <input type="file" id="m_image" accept="image/*" class="block mt-1 mb-2">
+
+    <label class="block mt-2">Or Image URL (optional):</label>
+    <input type="text" id="m_image_url" class="border p-1 block w-full mb-4" placeholder="https://...">
+
+    <button onclick="addMenuItem()" class="bg-green-600 text-white px-3 py-1 rounded">Save</button>
+  `;
+  
+}
+
+
+function addMenuItem() {
+  const fileInput = document.getElementById("m_image");
+  const file = fileInput.files[0];
+  const url = document.getElementById("m_image_url").value.trim();
+
+  // ✅ Prevent both being filled at the same time
+  if (file && url) {
+    alert("❌ Please upload a file OR paste a URL — not both.");
+    return;
+  }
+
+  // 📤 Handle file upload
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const base64 = e.target.result;
+      sendAddMenuData(base64, "");
+    };
+    reader.readAsDataURL(file);
+  } else {
+    // 🌐 Handle external image URL or no image
+    sendAddMenuData("", url);
+  }
+
+}
+
+
+function sendAddMenuData(imageBase64, imageUrl) {
+  fetch(API_URL, {
+    method: "POST",
+    body: new URLSearchParams({
+      action: "addMenuItem",
+      id: document.getElementById("m_id").value,
+      itemName: document.getElementById("m_name").value,
+      price: document.getElementById("m_price").value,
+      category: document.getElementById("m_cat").value,
+      sauces: document.getElementById("m_sauce").value,
+      extras: document.getElementById("m_extra").value,
+      image: imageBase64,
+      imageUrl: imageUrl
+    })
+  }).then(() => showTab("menu"));
+}
+
+
+function deleteMenuItem(id) {
+  if (!confirm("Delete menu item?")) return;
+  fetch(API_URL, {
+    method: "POST",
+    body: new URLSearchParams({
+      action: "deleteMenuItem",  // ✅ Must match code.gs exactly
+      id                        // ✅ This must be the item's ID (first column)
+    })
+  }).then(() =>  showTab("menu"));
+}
+
+
+// ========== ORDERS ==========
+function loadOrders(silent = false, searchQuery = "") {
+  fetch(`${API_URL}?action=getOrders`, { noLoader: silent })
+    .then(res => res.json())
+    .then(data => {
+        if (searchQuery) {
+    data = data.filter(order =>
+      order["Order ID"]?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }
+let html = `
+  <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+    <h2 class="text-xl font-semibold">Orders</h2>
+    <div class="flex gap-2 items-center">
+<div class="flex gap-1 items-center">
+  <input
+    type="text"
+    id="orderSearch"
+    placeholder="Search Order ID..."
+    class="border px-2 py-1 rounded text-sm"
+    oninput="handleOrderSearch(this.value)"
+  />
+  <button onclick="clearOrderSearch()" class="text-white bg-red-600 text-sm px-2 py-1">Reset</button>
+</div>
+      <label class="flex items-center gap-2 text-sm">
+        <span>Live Preview:</span>
+        <input type="checkbox" id="liveToggle" onchange="toggleLivePreview()" class="accent-[#0097e1]" ${liveRefreshEnabled ? "checked" : ""}>
+      </label>
+    </div>
+  </div>
+`;
+      if (data.length === 0) {
+        html += `<div class="text-center text-gray-500 mt-4 italic">No orders yet.</div>`;
+      } else {
+        html += `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">`;
+
+        data.forEach(order => {
+          const items = JSON.parse(order.Items || "[]").map(item => {
+            return `
+              <li class="text-sm mb-1">
+                <strong>${item.name}</strong><br>
+                ${item.sauces?.length ? `Sauce: ${item.sauces.join(", ")}<br>` : ""}
+                ${item.extras?.length ? `Extra: ${item.extras.join(", ")}<br>` : ""}
+                USD. ${item.price}
+              </li>
+            `;
+          }).join("");
+
+          const currentStatus = order.Status || "";
+
+          html += `
+            <div class="bg-white p-4 shadow rounded border relative">
+              <div class="absolute top-2 right-2 text-xs font-mono text-gray-400">${order["Order ID"]}</div>
+              <h3 class="text-lg font-bold mb-1">👤 ${order.User}</h3>
+              <ul class="mb-2">${items}</ul>
+              <p class="text-sm text-gray-700 mb-1">💬 ${order.Notes || "No notes"}</p>
+              <p class="text-right font-bold text-green-600">Total: USD. ${order.Total}</p>
+              <p class="text-right text-xs text-gray-400">${new Date(order.Date).toLocaleString()}</p>
+
+<div class="mt-2 text-sm">
+    <label class="font-medium mr-2">Status:</label>
+    <select
+  onfocus="pauseLiveRefresh()"
+  onchange="updateOrderStatus('${order["Order ID"]}', this.value); resumeLiveRefresh();" class="border rounded px-2 py-1">
+      <option value="">Select Status</option>
+      <option value="Processing" ${currentStatus === "Processing" ? "selected" : ""}>Processing</option>
+      <option value="Baking" ${currentStatus === "Baking" ? "selected" : ""}>Baking</option>
+      <option value="Delivered" ${currentStatus === "Delivered" ? "selected" : ""}>Delivered</option>
+    </select>
+  </div>
+
+              <div class="flex justify-end mt-2">
+                <button onclick='deleteOrder("${order["Order ID"]}")' class="bg-red-600 text-white px-3 py-1 rounded text-sm">Delete</button>
+              </div>
+            </div>`;
+        });
+
+        html += `</div>`;
+      }
+
+      document.getElementById("adminContent").innerHTML = html;
+    }); // this .then()
+} // ✅ ADD THIS MISSING BRACKET
+
+
+function updateOrderStatus(orderId, status) {
+  if (!status) return; // prevent sending if no status selected
+
+  fetch(API_URL, {
+    method: "POST",
+    body: new URLSearchParams({
+      action: "updateOrderStatus",
+      id: orderId,
+      status: status
+    })
+  })
+    .then(res => res.text())
+    .then(msg => {
+      console.log("✅ Status updated:", msg);
+    })
+    .catch(err => {
+      alert("❌ Failed to update status");
+      console.error(err);
+    });
+}
+
+
+
+function deleteOrder(id) {
+  if (!confirm("Delete order?")) return;
+ fetch(API_URL, {
+    method: "POST",
+    body: new URLSearchParams({ action: "deleteOrder", id })
+  }).then(() => showTab("orders"));
+}
+
+// ===== MODAL =====
+function openModal(type, data) {
+  modalType = type;
+  modalData = data;
+  document.getElementById("modalBackdrop").classList.remove("hidden");
+
+  if (type === "user") {
+    document.getElementById("modalTitle").innerText = "Edit User";
+    document.getElementById("modalBody").innerHTML = `
+      <input id="m_username" class="border p-1 mb-2 w-full" value="${data.username}" disabled>
+      <input id="m_password" class="border p-1 mb-2 w-full" value="${data.password}">
+      <select id="m_role" class="border p-1 mb-2 w-full">
+        <option value="admin" ${data.role === "admin" ? "selected" : ""}>Admin</option>
+        <option value="user" ${data.role === "user" ? "selected" : ""}>User</option>
+      </select>`;
+  }
+
+if (type === "menu") {
+  document.getElementById("modalTitle").innerText = "Edit Menu Item";
+document.getElementById("modalBody").innerHTML = `
+  <input id="m_id" class="border p-1 mb-2 w-full" value="${modalData.ID}" disabled>
+  <input id="m_name" class="border p-1 mb-2 w-full" value="${modalData["Item Name"]}">
+  <input id="m_price" class="border p-1 mb-2 w-full" value="${modalData.Price}">
+  <input id="m_cat" class="border p-1 mb-2 w-full" value="${modalData.Category}">
+  <input id="m_sauce" class="border p-1 mb-2 w-full" value="${modalData.Sauces}">
+  <input id="m_extra" class="border p-1 mb-2 w-full" value="${modalData.Extras}">
+
+  <label class="block mt-2">Upload New Image:</label>
+  <input type="file" id="m_image" accept="image/*" class="block mt-1">
+  <label class="block mt-2">Or Image URL:</label>
+  <input id="m_image_url" type="text" class="border p-1 mt-1 w-full" placeholder="https://..." value="${modalData.Image || ''}">
+`;
+
+}
+
+}
+
+function closeModal() {
+  document.getElementById("modalBackdrop").classList.add("hidden");
+}
+
+function saveModalData() {
+  if (modalType === "user") {
+    fetch(API_URL, {
+      method: "POST",
+      body: new URLSearchParams({
+        action: "updateUser",
+        username: modalData.username,
+        password: document.getElementById("m_password").value,
+        role: document.getElementById("m_role").value
+      })
+    }).then(() => {
+      closeModal();
+      currentTab = "users";
+      showTab("users");
+
+    });
+  }
+
+  if (modalType === "menu") {
+    const id = document.getElementById("m_id").value;
+    const itemName = document.getElementById("m_name").value;
+    const price = document.getElementById("m_price").value;
+    const category = document.getElementById("m_cat").value;
+    const sauces = document.getElementById("m_sauce").value;
+    const extras = document.getElementById("m_extra").value;
+    const imageUrl = document.getElementById("m_image_url").value;
+    const imageFile = document.getElementById("m_image").files[0];
+    
+    if (imageFile) {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const imageBase64 = e.target.result;
+
+        sendMenuUpdate({
+          id,
+          itemName,
+          price,
+          category,
+          sauces,
+          extras,
+          imageUrl,
+          imageBase64
+        });
+      };
+      reader.readAsDataURL(imageFile);
+    } else {
+      sendMenuUpdate({
+        id,
+        itemName,
+        price,
+        category,
+        sauces,
+        extras,
+        imageUrl,
+        imageBase64: "", // no new upload
+      });
+    }
+  }
+}
+
+function sendMenuUpdate(data) {
+  console.log("📤 Sending menu update:", data); // DEBUG log
+  fetch(API_URL, {
+    method: "POST",
+    body: new URLSearchParams({
+      action: "updateMenuItem",
+      id: data.id,
+      itemName: data.itemName,
+      price: data.price,
+      category: data.category,
+      sauces: data.sauces,
+      extras: data.extras,
+      imageUrl: data.imageUrl,
+      image: data.imageBase64
+    })
+  })
+    .then(res => res.text())
+    .then((resp) => {
+      console.log("✅ Server response:", resp); // DEBUG log
+      closeModal();
+      showTab("menu");
+    });
+}
+
+
+
+function showTab(tabName) {
+  // Load your tab content (e.g. loadUsers(), loadMenu(), loadOrders()...)
+  if (tabName === 'users') loadUsers();
+  if (tabName === 'menu') loadMenu();
+  if (tabName === 'orders') loadOrders();
+}
+
+
+
+// ===== SESSION CHECK =====
+window.addEventListener("DOMContentLoaded", () => {
+  const token = localStorage.getItem("session");
+  const role = localStorage.getItem("role");
+  const userIP = "unknown";
+
+  if (!token || !role) {
+    window.location.href = "index.html";
+  } else {
+    fetch(`${API_URL}?action=checkSession&token=${token}&ip=${userIP}`)
+      .then(res => res.text())
+      .then(valid => {
+        if (valid !== "true") {
+          window.location.href = "index.html";
+        } else {
+          if (window.location.pathname.includes("admin") && role !== "admin") {
+            window.location.href = "index.html";
+          }
+          currentTab = "users";
+           showTab("users");
+
+        }
+      });
+  }
+});
+</script>
+
+<!-- Loader -->
+<div id="globalLoader" class="fixed inset-0 bg-[#0097e1] bg-opacity-70 z-50 flex items-center justify-center hidden">
+  <h1 class="text-white text-4xl font-bold animate-pulse font-mono">Abiha Softo</h1>
+</div>
+
+<style>
+  @keyframes wave {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+    100% { transform: translateY(0px); }
+  }
+  #globalLoader h1 {
+    animation: wave 1s infinite ease-in-out;
+    font-style:italic;
+  }
+  .active-tab {
+  background-color: #006fa1 !important;
+  color: white !important;
+}
+</style>
+<script>
+  function showLoader() {
+    document.getElementById("globalLoader").classList.remove("hidden");
+  }
+
+  function hideLoader() {
+    document.getElementById("globalLoader").classList.add("hidden");
+  }
+
+// Auto-apply loader to fetch, except for live order refresh
+const originalFetch = window.fetch;
+window.fetch = function (input, init = {}) {
+  const silent = init.noLoader;
+
+  if (!silent) showLoader();
+
+  return originalFetch(input, init)
+    .then(res => {
+      if (!silent) hideLoader();
+      return res;
+    })
+    .catch(err => {
+      if (!silent) hideLoader();
+      throw err;
+    });
+};
+
+
+
+    // === Live Order Refresh Integration ===
+  let currentTab = "users"; // Default tab
+
+  function showTab(tab) {
+    currentTab = tab;
+
+    // Clear previous active tab classes
+    document.querySelectorAll(".tab-button").forEach(btn => btn.classList.remove("active-tab"));
+    const activeBtn = document.getElementById(`tab-${tab}`);
+    if (activeBtn) activeBtn.classList.add("active-tab");
+
+    if (tab === "orders") loadOrders();
+    if (tab === "menu") loadMenu();
+    if (tab === "users") loadUsers();
+  }
+
+setInterval(() => {
+  if (currentTab === "orders" && liveRefreshEnabled && !pauseOrdersRefresh) {
+    loadOrders(true);
+  }
+}, 2000);
+
+
+
+let pauseOrdersRefresh = false;
+
+function pauseLiveRefresh() {
+  pauseOrdersRefresh = true;
+}
+
+function resumeLiveRefresh() {
+  setTimeout(() => {
+    pauseOrdersRefresh = false;
+  }, 1000); // short delay to avoid select issues
+}
+
+function toggleLivePreview() {
+  const checkbox = document.getElementById("liveToggle");
+  liveRefreshEnabled = checkbox.checked;
+
+  if (liveRefreshEnabled && currentTab === "tab") {
+    loadOrders(true); // 🚀 Immediately fetch new orders once enabled
+  }
+}
+
+function handleOrderSearch(query) {
+  loadOrders(false, query);
+}
+
+function clearOrderSearch() {
+  document.getElementById("orderSearch").value = "";
+  loadOrders(); // Reload all orders
+}
+
+
+</script>
+
+
+
+</body>
+</html>

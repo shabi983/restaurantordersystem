@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Customer Preview</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" type="image/png" href="AS White.png">
+
+  <script>
+  const API_URL = "https://script.google.com/macros/s/AKfycby_dcdxa11mxd14S1Uvd7m9hQR-FKgGh3jYMu0emhBFiw5FAbpM7oa7smACeZUJQMod0A/exec";
+
+function loadCustomerPreview() {
+  fetch(API_URL + "?action=getCustomerOrder")
+    .then(res => res.json())
+    .then(data => {
+      console.log("📦 Preview Data:", data);
+      let html = `<h3 class="text-lg font-semibold mb-2">Order Preview</h3><ul class="mb-4">`;
+
+      data.items?.forEach(i => {
+        const sauces = Array.isArray(i.sauces) ? i.sauces.join(', ') : i.sauces || "";
+        const extras = Array.isArray(i.extras) ? i.extras.join(', ') : i.extras || "";
+
+        html += `
+          <li class="mb-2">
+            <strong>${i.name}</strong> - USD. ${i.price}
+            ${sauces ? `<br><span class="text-sm text-gray-600"><b>Sauce:</b> ${sauces}</span>` : ''}
+            ${extras ? `<br><span class="text-sm text-gray-600"><b>Extras:</b> ${extras}</span>` : ''}
+          </li>
+        `;
+      });
+
+      html += `</ul><p class="font-semibold">Total: USD. ${data.total}</p>`;
+      if (data.notes) html += `<p class="text-sm italic mt-2"><b>Note:</b> ${data.notes}</p>`;
+
+      document.getElementById("customerPreview").innerHTML = html;
+    });
+}
+
+
+  setInterval(loadCustomerPreview, 3000); // every 3s
+  </script>
+</head>
+
+<body class="bg-gray-100">
+
+<div style="width: 100%; display: inline-flex; align-items: anchor-center; position: sticky; top: 0px; margin-bottom: 5px;   background: #ffffff; flex-direction: row; justify-content: space-around; border-bottom: 3px solid #0097e1; z-index: 9999;">
+ <h1 class="text-2xl font-bold mb-4">Your Order Preview</h1> <img style="width:70px;" src="AS White.png"><span class="text-gray-500 text-sm"><i>Version 1.0.0.0</i></span>
+</div>
+
+  <div class="p-4 max-w-2xl mx-auto">
+    <div id="customerPreview" class="bg-white p-4 rounded shadow"></div>
+  </div>
+
+  <!-- Loader -->
+  <div id="globalLoader" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+    <div class="relative flex items-center justify-center" style="position: absolute; bottom: 60px; right: 30px;">
+      <div class="absolute w-32 h-32 border-4 border-[#0097e1] border-dashed rounded-full animate-spin"></div>
+      <h1 class="text-[#0097e1] uppercase text-l font-bold font-mono animate-zoom italic">Abiha Softo</h1>
+    </div>
+  </div>
+
+  <!-- Styles -->
+  <style>
+    @keyframes zoom {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+    }
+    .animate-zoom {
+      animation: zoom 1s ease-in-out infinite;
+    }
+  </style>
+
+  <!-- Loader Script -->
+  <script>
+    function showLoader() {
+      document.getElementById("globalLoader").classList.remove("hidden");
+    }
+    function hideLoader() {
+      document.getElementById("globalLoader").classList.add("hidden");
+    }
+
+    const originalFetch = window.fetch;
+    window.fetch = function (...args) {
+      showLoader();
+      return originalFetch(...args)
+        .then(res => {
+          hideLoader();
+          return res;
+        })
+        .catch(err => {
+          hideLoader();
+          throw err;
+        });
+    };
+  </script>
+</body>
+</html>
