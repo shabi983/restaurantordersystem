@@ -2,24 +2,89 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>User Order</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="icon" type="image/png" href="AS White.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css?v=1.0.5">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Client Portal">
+  <link rel="manifest" href="/CPAS/roxi112/manifest.json">
+  <link rel="icon" href="https://abihasofto.xyz/CPAS/roxi112/icon-512.png" type="image/png">
+  <link rel="apple-touch-icon" sizes="152x152" href="https://abihasofto.xyz/CPAS/roxi112/icon-512.png">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+ <meta name="theme-color" content="#0097e1">
+  <title>User Dashboard</title>
+  <style>
+    body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  background: #f4f4f4;
+  overflow-x: hidden; /* 👈 prevent page-wide horizontal scroll */
+}
+
+    .hidden {
+      display: none !important;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+   .sidebar-transition {
+    transition: transform 0.3s ease-in-out, width 0.3s ease-in-out;
+    }
+    .content-transition {
+      transition: margin-left 0.3s ease-in-out;
+    }
+
+
+  </style>
+
 </head>
 <body class="bg-gray-100">
-  <div style="width: 100%; display: inline-flex; align-items: anchor-center; position: sticky; top: 0px; margin-bottom: 5px; background: #ffffff; flex-direction: row; justify-content: space-around; border-bottom: 3px solid #0097e1; z-index: 9999;">
-    <h1 class="text-2xl font-bold">Take Order</h1>
-    <img style="width:70px;" src="AS White.png">
-    <span class="text-gray-500 text-sm"><i>Version 1.0.0.0</i></span>
+
+  <!-- Topbar (All Devices) -->
+  <div class="text-white flex items-center sticky top-0 z-[9999] justify-between px-4 py-3 bg-[#0097e1]" >
+  <div class="text-xl font-bold"><img style="width:70px;" src="https://abihasofto.xyz/CPAS/roxi112/loading.png" alt="Abiha Softo"></div>
+    <div class="text-xl font-bold">User Dashboard</div>
+    <button onclick="toggleSidebar()" class="space-y-1">
+      <i class="fa fa-bars text-2xl"></i>
+    </button>
   </div>
 
-  <div class="p-4 max-w-3xl mx-auto">
+  <div class="flex">
+
+    <!-- Sidebar -->
+    <aside id="sidebar"
+      class="sidebar-transition fixed top-0 left-0 h-full bg-[#0097e1] text-white p-4 space-y-4 w-64 overflow-hidden lg:fixed z-40 h-screen">
+
+      <div id="sidebarContent">
+
+  <img style="width:70px;" src="https://abihasofto.xyz/CPAS/roxi112/loading.png" alt="Abiha Softo">
+        <a onclick="showDiv('takeOrders', this)" id="btnTakeOrders" class="nav-link block py-2 px-4 rounded cursor-pointer m-5">Take Orders</a>
+        <a onclick="showDiv('commingUpdates', this)" class="nav-link block py-2 px-4 rounded cursor-pointer m-5">Updates</a>
+        <a class="block py-2 px-4 hover:bg-red-600 border hover:text-white border-red-700 text-red-700 rounded cursor-pointer m-5" onclick="logout()">Logout</a>
+         <span class="text-white-600 text-sm fixed" style="bottom: 5px;"><i>Version 1.0.0</i></span>
+      </div>
+    </aside>
+
+    <!-- Overlay for mobile/tablet -->
+    <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 hidden z-30" onclick="toggleSidebar()"></div>
+
+    <!-- Main content -->
+    <main id="mainContent" class="flex-1 p-6 content-transition lg:ml-64 overflow-x-hidden">
+
     
-
-
-
-    <!-- Search Box for Menu Grid -->
+   <div bis_skin_checked="1" class="flex justify-between">
+       <h1 class="text-xl font-bold mb-6 mt-6">Welcome: <span id="UserID" class=" text-green-400 font-thin"></span></h1>
+       <button onclick="hardRefresh()" style="color:#0097e1; border:none;"><i class="fa fa-refresh transition-transform duration-300 hover:animate-spin cursor-pointer text-xl" onclick="hardRefresh()" title="Refresh"></i></button></div>
+        
+  
+   <div id="takeOrders" class="p-4 max-w-3xl mx-auto page hidden">
+        <!-- Search Box for Menu Grid -->
 <div class="mb-4 flex items-center justify-around" >
   <h3 class="text-lg text-center font-bold uppercase m-4">Item Menu</h3>
   <input type="text" placeholder="Search item name..." 
@@ -66,14 +131,139 @@
         </div>
       </div>
     </div>
+</div>
 
-    <!-- Scripts -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
-    <script>
-      const API_URL = "https://script.google.com/macros/s/AKfycby_dcdxa11mxd14S1Uvd7m9hQR-FKgGh3jYMu0emhBFiw5FAbpM7oa7smACeZUJQMod0A/exec";
+<div id="commingUpdates" class="page hidden">
+  <h2>Coming Updates Soon</h2>
+</div>
+
+  
+<div>
+  <p class="mt-3 italic text-center text-gray-500">You can Take, Print & Submit the Orders</p> 
+  <p class="text-center uppercase">Powered By<a href="https://abihasofto.xyz/" target="_blank" class="text-[#0097e1] hover:text-blue-700 uppercase"> Abiha Softo </a></p>
+  </div>
+ 
+    </main>
+
+ <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+<script>
+function showDiv(id, element) {
+  // Hide all content sections
+  document.querySelectorAll('.page').forEach(div => div.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+
+  // Reset button styles
+  document.querySelectorAll('.nav-link').forEach(btn => {
+    btn.classList.remove('bg-[#0056b3]', 'text-white');
+    btn.classList.add('bg-[#0097e1]', 'text-white');
+  });
+
+  // Highlight active button
+  element.classList.add('bg-[#0056b3]', 'text-white');
+  element.classList.remove('bg-[#0097e1]');
+
+  // Save active tab to localStorage
+  localStorage.setItem("activeTab", id);
+
+  // Optional: Hide #comm if on commingUpdates
+  if (id === 'commingUpdates') {
+    const comm = document.getElementById("comm");
+    if (comm) comm.classList.add("hidden");
+  }
+}
+
+// ✅ Load active tab from localStorage or default to 'takeOrders'
+window.addEventListener("DOMContentLoaded", () => {
+  const activeTab = localStorage.getItem("activeTab") || "takeOrders";
+  const activeBtn = document.querySelector(`[onclick*="${activeTab}"]`);
+  if (activeBtn) {
+    showDiv(activeTab, activeBtn);
+  }
+});
+</script>
+
+
+<script>
+  let sidebarOpen = window.innerWidth >= 1024;
+
+  function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarContent = document.getElementById('sidebarContent');
+    const overlay = document.getElementById('overlay');
+    const mainContent = document.getElementById('mainContent');
+
+    sidebar.classList.toggle('w-64');
+    sidebar.classList.toggle('w-0');
+    sidebar.classList.toggle('-translate-x-full');
+
+    sidebarContent.classList.toggle('opacity-0');
+    sidebarContent.classList.toggle('pointer-events-none');
+
+    if (window.innerWidth >= 1024) {
+      mainContent.classList.toggle('lg:ml-64');
+    } else {
+      overlay.classList.toggle('hidden');
+    }
+
+    sidebarOpen = !sidebarOpen;
+  }
+
+  // ✅ Fix: ensure sidebar stays hidden on mobile/tab when page loads
+  document.addEventListener('DOMContentLoaded', () => {
+    if (window.innerWidth < 1024) {
+      const sidebar = document.getElementById('sidebar');
+      const sidebarContent = document.getElementById('sidebarContent');
+      const overlay = document.getElementById('overlay');
+
+      sidebar.classList.add('-translate-x-full');
+      sidebar.classList.add('w-0');
+      sidebar.classList.remove('w-64');
+
+      sidebarContent.classList.add('opacity-0');
+      sidebarContent.classList.add('pointer-events-none');
+
+      overlay.classList.add('hidden');
+    } 
+  }); 
+
+
+
+</script>
+
+
+
+<script>
+   const API_URL = "https://script.google.com/macros/s/AKfycby_dcdxa11mxd14S1Uvd7m9hQR-FKgGh3jYMu0emhBFiw5FAbpM7oa7smACeZUJQMod0A/exec";
       let fullMenu = [], selectedItemsMap = {};
 
-      window.onload = () => {
+        // ✅ SESSION + ROLE GUARD (prevent unauthorized access to user.html)
+  window.addEventListener("DOMContentLoaded", () => {
+    const token = localStorage.getItem("session");
+    const role = localStorage.getItem("role");
+    const nameSpan = document.getElementById("UserID");
+    const username = localStorage.getItem("username");
+
+    if (!token || !role) {
+      window.location.href = "index.html"; // Not logged in
+    } else if (role !== "user") {
+      window.location.href = "index.html"; // Not a user
+    } else {if (nameSpan && username) {
+     nameSpan.textContent = username;} }
+
+                               // ✅ Restore the last visited tab
+          const savedTab = localStorage.getItem("lastTab") || "users";
+          showTab(savedTab);
+  });
+
+ 
+  function logout() {
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("userPassword");
+    window.location.href = "index.html#login";
+  }
+
+
+        window.onload = () => {
         fetch(API_URL + '?action=getMenu')
           .then(res => res.json())
           .then(data => {
@@ -254,7 +444,7 @@ function renderSelectedItems() {
         const notes = document.getElementById("notes").value;
         if (notes) html += `<p class="italic text-sm mt-1">Note: ${notes}</p>`;
         receiptBody.innerHTML = html;
-        const qr = new QRious({ element: document.createElement("canvas"), value: "Thank you for your order!", size: 80 });
+        const qr = new QRious({ element: document.createElement("canvas"), value: "https://google.com", size: 80 });
         const qrContainer = document.getElementById("qrContainer");
         qrContainer.innerHTML = "";
         qrContainer.appendChild(qr.element);
@@ -264,9 +454,19 @@ function renderSelectedItems() {
       function closeReceipt() {
         document.getElementById("receiptPopup").classList.add("hidden");
       }
-    </script>
 
-    <!-- Extra styles -->
+</script>
+
+<script>
+function hardRefresh() {
+  const url = window.location.href.split('?')[0]; // remove old query if exists
+  const cacheBuster = '?v=' + new Date().getTime(); // unique value
+  window.location.href = url + cacheBuster;
+}
+</script>
+
+
+  <!-- Extra styles -->
     <style>
       @media print {.no-print { display: none !important; }}
   #menuGridWrapper::-webkit-scrollbar {
@@ -287,13 +487,14 @@ function renderSelectedItems() {
 
     </style>
 
-    <!-- Loader -->
-    <div id="globalLoader" class="fixed inset-0 z-50 flex items-center justify-center hidden">
-      <div class="relative flex items-center justify-center" style="position: absolute; bottom: 60px; right: 30px;">
-        <div class="absolute w-32 h-32 border-4 border-[#0097e1] border-dashed rounded-full animate-spin"></div>
-        <h1 class="text-[#0097e1] uppercase text-l font-bold font-mono animate-zoom italic">Abiha Softo</h1>
-      </div>
+  <!-- Loader -->
+  <div id="globalLoader" class="fixed w-[200px] inset-0 z-50 flex items-center justify-center hidden">
+    <div class="relative flex items-center justify-center" style="position: absolute; bottom: 60px; right: 30px;">
+      <div class="absolute w-28 h-28 border-4 border-[#ffffff] border-dashed rounded-full animate-spin"></div>
+      <img class="animate-zoom" style=" max-width: 88px;" src="https://abihasofto.xyz/CPAS/roxi112/loading.png" alt="Abiha Softo">
     </div>
+  </div>
+
 
     <style>
       @keyframes zoom {
@@ -326,5 +527,9 @@ function renderSelectedItems() {
           });
       };
     </script>
+
+
+
+
 </body>
 </html>
